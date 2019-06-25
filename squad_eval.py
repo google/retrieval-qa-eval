@@ -304,19 +304,23 @@ def _eval_doc_rank(squad_ds: SquadDataset,
   correct answer (almost always, there is only one), this method returns the
   rank of the best-ranking document.
   """
-  doc_to_rank = {}
+  doc_rank = {}
+
+  # At the end of this loop, the doc_rank dictionary will contain a mapping from
+  # document ids to the best-ranking answer sentence in that document.
   for j, x in enumerate(squad_ds.master_index):
     sentence_rank = ranks[j]
-    document_rank = min(sentence_rank, doc_to_rank.get(x.doc_id, sys.maxsize))
-    doc_to_rank[x.doc_id] = document_rank
-  doc_rank = [0] * len(doc_to_rank)
-  for doc_id, rank in doc_to_rank.items():
-    doc_rank[doc_id - 1] = rank
-  doc_rank = rankdata(doc_rank)
+    document_rank = min(sentence_rank, doc_rank.get(x.doc_id, sys.maxsize))
+    doc_rank[x.doc_id] = document_rank
+
+  # The two statements below transfor the doc_rank dictionary from holding
+  # sentence ranks to holding document ranks.
+  kv = list(doc_rank.items())
+  doc_rank = dict(zip([k for k, _ in kv], rankdata([v for k, v in kv])))
 
   correct_doc_ids = [squad_ds.master_index[i].doc_id
                      for i in squad_ds.response_index[qa_input.response]]
-  return min([doc_rank[doc_id - 1] for doc_id in correct_doc_ids])
+  return min([doc_rank[doc_id] for doc_id in correct_doc_ids])
 
 
 def _load_data(squad_json: Any,
