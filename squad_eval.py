@@ -27,9 +27,19 @@ pip install):
  - tf-sentencepiece
  - recordclass
 
+Ideally, you should use virtualenv to create an isolated python environment:
+
+  https://virtualenv.pypa.io/en/latest/
+
 ## Run
 
-The following invocation runs on panjkora@ from google3/ root:
+Download the SQuAD 1.1 data files directly from:
+
+    https://rajpurkar.github.io/SQuAD-explorer/
+
+The following invocation runs the evaluation on the dev file. Alternatively,
+use train-v1.1.json to obtain numbers that are directly comparable to the
+ones reported in the ReQA paper.
 
     python3 squad_eval.py --saved_model /path/to/model --squad dev-v1.1.json
 
