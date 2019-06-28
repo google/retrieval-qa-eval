@@ -200,7 +200,7 @@ def squad_tfhub_eval(tfhub_url, squad_json):
   model = hub.Module(tfhub_url)
   model.question_encoder(input=[])
   model.response_encoder(input=[], context=[])
-  # TODO(aahmad): finish implementation
+  # TODO: finish implementation
 
 
 def _eval(squad_ds: SquadDataset):
