@@ -24,8 +24,6 @@ with some simplification/adaptation:
 This code aims for high accuracy/F1, but does not try to reach full 100%.
 Some of the long tail is left alone, to avoid proliferating substitution rules
 for diminishing returns.
-
-When run in squad_sentence_break_test.py, sb_sed achieves an F1 of .9961.
 """
 
 import re

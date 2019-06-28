@@ -108,7 +108,7 @@ def main():
 
 
 class QuestionAnswerInput(recordclass.RecordClass):
-  """A question, it's answer, the answer context, and the question encoding."""
+  """A question, its answer, the answer context, and the question encoding."""
   query: str
   response: str
   response_context: str
