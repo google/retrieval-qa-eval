@@ -196,7 +196,16 @@ def squad_savedmodel_eval(savedmodel_dir, squad_json):
   qencoder = saved_model.signatures[QUERY_ENCODER_SIGNATURE]
   rencoder = saved_model.signatures[RESPONSE_ENCODER_SIGNATURE]
 
-  _eval(_load_data(squad_json, qencoder, rencoder))
+  def wrapped_qencoder(queries: List[QuestionAnswerInput]):
+    return qencoder(tf.constant(to_array(
+        [make_example(inp_text=q.query) for q in queries])))["outputs"]
+
+  def wrapped_rencoder(index: List[IndexedItem]):
+    examples = [
+        make_example(res_text=a.sentence, res_context=a.context) for a in index]
+    return rencoder(tf.constant(to_array(examples)))["outputs"]
+
+  _eval(_load_data(squad_json, wrapped_qencoder, wrapped_rencoder))
 
 
 def squad_tfhub_eval(tfhub_url, squad_json):
@@ -206,11 +215,21 @@ def squad_tfhub_eval(tfhub_url, squad_json):
     tfhub_url: The location where the TF-Hub module is located.
     squad_json: The SQuAD JSON input file that will be used for evaluation.
   """
-  del squad_json
-  model = hub.Module(tfhub_url)
-  model.question_encoder(input=[])
-  model.response_encoder(input=[], context=[])
-  # TODO: finish implementation
+  saved_model = hub.load(tfhub_url)
+
+  qencoder = saved_model.signatures["question_encoder"]
+  rencoder = saved_model.signatures[RESPONSE_ENCODER_SIGNATURE]
+
+  def wrapped_qencoder(queries: List[QuestionAnswerInput]):
+    return qencoder(input=tf.constant(
+        np.asarray([q.query for q in queries])))["outputs"]
+
+  def wrapped_rencoder(index: List[IndexedItem]):
+    return rencoder(
+        input=tf.constant(np.asarray([a.sentence for a in index])),
+        context=tf.constant(np.asarray([a.context for a in index])))["outputs"]
+
+  _eval(_load_data(squad_json, wrapped_qencoder, wrapped_rencoder))
 
 
 def _eval(squad_ds: SquadDataset):
@@ -369,17 +388,14 @@ def _load_data(squad_json: Any,
                len(questions), qa_count, len(master_index))
 
   for i, chunk in enumerate(_chunks(queries, 100)):
-    qencs = qencoder(tf.constant(to_array(
-        [make_example(inp_text=q.query) for q in chunk])))["outputs"]
+    qencs = qencoder(chunk)
     for j in range(qencs.shape[0]):
       queries[i * 100 + j].encoding = qencs[j]
     if i % 10 == 0:
       logging.info("questions: encoded %s of %s...", i * 100, len(queries))
 
   for i, chunk in enumerate(_chunks(master_index, 50)):
-    examples = [
-        make_example(res_text=a.sentence, res_context=a.context) for a in chunk]
-    rencs = rencoder(tf.constant(to_array(examples)))["outputs"]
+    rencs = rencoder(chunk)
     for j in range(rencs.shape[0]):
       master_index[i * 50 + j].encoding = rencs[j]
     if i % 20 == 0:
